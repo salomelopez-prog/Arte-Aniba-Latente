@@ -19,13 +19,15 @@ const toneClasses = {
   'from-moss to-clay-soft': 'from-moss to-clay-soft',
 }
 
-const ProductCard = ({ product }) => {
+const ProductCard = ({ product, onSelect }) => {
   const { addToCart } = useCart()
   const isOutOfStock = product.stock !== undefined && product.stock <= 0
 
   const handleAddToCart = () => {
     if (!isOutOfStock) addToCart(product)
   }
+
+  const handleSelect = () => onSelect?.(product)
 
   return (
     <motion.article
