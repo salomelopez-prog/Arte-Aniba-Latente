@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import api, { adminApi, contactsApi, customersApi, ordersApi, productsApi, settingsApi } from '../api/client.js'
+import api, { adminApi, authApi, contactsApi, customersApi, ordersApi, productsApi, settingsApi } from '../api/client.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { formatCurrency } from '../data/products.js'
 
