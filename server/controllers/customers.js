@@ -172,4 +172,29 @@ const update = async (req, res) => {
   }
 };
 
-export { register, list, getById, update };
+// Eliminar cliente: solo si no tiene pedidos (para conservar el historial de ventas).
+const remove = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const existing = await query('SELECT id FROM customers WHERE id = $1', [id]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'Cliente no encontrado' });
+    }
+
+    const orders = await query('SELECT COUNT(*)::int AS n FROM orders WHERE customer_id = $1', [id]);
+    if (orders.rows[0].n > 0) {
+      return res.status(409).json({
+        error: `No se puede eliminar: el cliente tiene ${orders.rows[0].n} pedido(s). Se conserva para mantener el historial de ventas.`,
+      });
+    }
+
+    await query('DELETE FROM customers WHERE id = $1', [id]);
+    return res.json({ message: 'Cliente eliminado' });
+  } catch (error) {
+    console.error('[Customers] Error al eliminar:', error.message);
+    return res.status(500).json({ error: 'Error al eliminar cliente' });
+  }
+};
+
+export { register, list, getById, update, remove };

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, list, getById, update } from '../controllers/customers.js';
+import { register, list, getById, update, remove } from '../controllers/customers.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
@@ -10,5 +10,6 @@ router.post('/register', register);
 router.get('/', authenticate, list);
 router.get('/:id', authenticate, getById);
 router.put('/:id', authenticate, update);
+router.delete('/:id', authenticate, remove);
 
 export default router;

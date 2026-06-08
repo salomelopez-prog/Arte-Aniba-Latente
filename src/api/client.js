@@ -64,6 +64,7 @@ export const customersApi = {
   },
   getById: (id) => request(`/customers/${id}`),
   update: (id, data) => request(`/customers/${id}`, { method: 'PUT', body: data }),
+  delete: (id) => request(`/customers/${id}`, { method: 'DELETE' }),
 }
 
 export const contactsApi = {
@@ -83,6 +84,7 @@ export const authApi = {
   logout: (refreshToken) => request('/auth/logout', { method: 'POST', body: { refreshToken } }),
   listUsers: () => request('/auth/users'),
   createUser: (data) => request('/auth/users', { method: 'POST', body: data }),
+  setUserActive: (id, is_active) => request(`/auth/users/${id}`, { method: 'PATCH', body: { is_active } }),
 }
 
 export const adminApi = {

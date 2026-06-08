@@ -201,4 +201,45 @@ const createUser = async (req, res) => {
   }
 };
 
-export { login, refresh, me, logout, listUsers, createUser };
+// Activar/desactivar un usuario admin (solo superadmin). No se borra: es reversible.
+const setUserActive = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { is_active } = req.body;
+
+    if (typeof is_active !== 'boolean') {
+      return res.status(400).json({ error: 'is_active debe ser true o false' });
+    }
+
+    const target = await query('SELECT id, role FROM admin_users WHERE id = $1', [id]);
+    if (target.rows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    // No puedes desactivar tu propia cuenta.
+    if (id === req.admin.id && !is_active) {
+      return res.status(400).json({ error: 'No puedes desactivar tu propia cuenta' });
+    }
+
+    // Debe quedar al menos un superadmin activo.
+    if (!is_active && target.rows[0].role === 'superadmin') {
+      const count = await query(
+        "SELECT COUNT(*)::int AS n FROM admin_users WHERE role = 'superadmin' AND is_active = TRUE"
+      );
+      if (count.rows[0].n <= 1) {
+        return res.status(400).json({ error: 'Debe quedar al menos un superadmin activo' });
+      }
+    }
+
+    const result = await query(
+      'UPDATE admin_users SET is_active = $1 WHERE id = $2 RETURNING id, email, name, role, is_active, last_login, created_at',
+      [is_active, id]
+    );
+    return res.json({ user: result.rows[0] });
+  } catch (error) {
+    console.error('[Auth] Error al actualizar usuario:', error.message);
+    return res.status(500).json({ error: 'Error al actualizar usuario' });
+  }
+};
+
+export { login, refresh, me, logout, listUsers, createUser, setUserActive };

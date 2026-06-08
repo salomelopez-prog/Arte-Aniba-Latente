@@ -414,9 +414,22 @@ const CustomersTab = () => {
   const [detail, setDetail] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
 
+  const load = () => customersApi.list({ limit: 100 }).then((d) => setCustomers(d.customers)).catch(() => {})
+
   useEffect(() => {
-    customersApi.list({ limit: 100 }).then((d) => setCustomers(d.customers)).catch(() => {}).finally(() => setLoading(false))
+    load().finally(() => setLoading(false))
   }, [])
+
+  const handleDelete = async (customer) => {
+    if (!window.confirm(`¿Seguro que quieres eliminar a ${customer.first_name} ${customer.last_name || ''}? Esta acción no se puede deshacer.`)) return
+    try {
+      await customersApi.delete(customer.id)
+      setDetail(null)
+      await load()
+    } catch (err) {
+      window.alert(err.data?.error || err.message || 'No se pudo eliminar el cliente')
+    }
+  }
 
   const openDetail = async (id) => {
     setDetailLoading(true)
@@ -500,6 +513,18 @@ const CustomersTab = () => {
                     </div>
                   ) : (
                     <p className="text-sm text-carbon/48">Sin compras registradas.</p>
+                  )}
+                </div>
+                <div className="border-t border-carbon/10 pt-4">
+                  {detail.customer.order_count > 0 ? (
+                    <p className="text-sm text-carbon/52">Este cliente tiene pedidos, por eso no se puede eliminar (se conserva el historial de ventas).</p>
+                  ) : (
+                    <button
+                      onClick={() => handleDelete(detail.customer)}
+                      className="inline-flex items-center gap-2 rounded-full bg-red-500/10 px-5 py-2.5 text-sm font-bold text-red-600 transition hover:bg-red-500/20"
+                    >
+                      <Trash2 className="h-4 w-4" /> Eliminar cliente
+                    </button>
                   )}
                 </div>
               </div>
@@ -701,6 +726,15 @@ const AdminsTab = () => {
     }
   }
 
+  const handleToggleActive = async (a) => {
+    try {
+      await authApi.setUserActive(a.id, !a.is_active)
+      await load()
+    } catch (err) {
+      window.alert(err.data?.error || err.message || 'No se pudo actualizar el usuario')
+    }
+  }
+
   if (loading) return <div className="py-10 text-center text-carbon/48">Cargando usuarios...</div>
 
   return (
@@ -742,6 +776,14 @@ const AdminsTab = () => {
             <p className="text-sm text-carbon/52">{a.email} · {a.role}</p>
           </div>
           <span className={`ml-auto rounded-full px-3 py-0.5 text-xs font-bold ${a.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>{a.is_active ? 'Activo' : 'Inactivo'}</span>
+          {isSuperadmin && a.id !== user?.id && (
+            <button
+              onClick={() => handleToggleActive(a)}
+              className={`rounded-full px-3 py-1 text-xs font-bold transition ${a.is_active ? 'bg-carbon/10 text-carbon/70 hover:bg-carbon/20' : 'bg-moss/15 text-moss hover:bg-moss/25'}`}
+            >
+              {a.is_active ? 'Desactivar' : 'Activar'}
+            </button>
+          )}
         </div>
       ))}
       </div>
