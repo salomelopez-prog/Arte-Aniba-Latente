@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Fraunces", Georgia, serif;
+  --font-body: "Afacad", ui-sans-serif, system-ui, sans-serif;
+  --color-clay-bg: #fdfbf7;
+  --color-clay-surface: #f2ede4;
+  --color-clay-soft: #ead9c8;
+  --color-clay: #b86b42;
+  --color-clay-dark: #9a5733;
+  --color-walnut: #8b6f4e;
+  --color-carbon: #1f1b18;
+  --color-night: #1a1511;
+  --color-moss: #425545;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(184, 107, 66, 0.22), transparent 34rem),
+    radial-gradient(circle at 82% 18%, rgba(66, 85, 69, 0.18), transparent 27rem),
+    linear-gradient(135deg, rgba(253, 251, 247, 0.98), rgba(242, 237, 228, 0.88) 48%, rgba(234, 217, 200, 0.72)),
+    #fdfbf7;
+  color: #1f1b18;
+  font-family: var(--font-body);
+}
+
+::selection {
+  background: rgba(184, 107, 66, 0.32);
+  color: #1f1b18;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.grain-layer {
+  background-image:
+    radial-gradient(circle at 18% 12%, rgba(31, 27, 24, 0.08) 0 1px, transparent 1.5px),
+    linear-gradient(rgba(31, 27, 24, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(31, 27, 24, 0.03) 1px, transparent 1px);
+  background-size: 21px 21px, 42px 42px, 42px 42px;
+}
+
+.topographic-layer {
+  background-image:
+    repeating-radial-gradient(circle at 18% 22%, rgba(31, 27, 24, 0.07) 0 1px, transparent 1px 18px),
+    repeating-radial-gradient(circle at 82% 72%, rgba(184, 107, 66, 0.08) 0 1px, transparent 1px 22px);
+  mask-image: linear-gradient(to bottom, black, transparent 72%);
+}
+
+.glass-shell {
+  background: linear-gradient(135deg, rgba(253, 251, 247, 0.88), rgba(242, 237, 228, 0.72));
+  border: 1px solid rgba(31, 27, 24, 0.1);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.78) inset, 0 26px 70px rgba(31, 27, 24, 0.1);
+  backdrop-filter: blur(20px);
+}
+
+.dark-shell {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(184, 107, 66, 0.38), transparent 34%),
+    radial-gradient(circle at 82% 72%, rgba(66, 85, 69, 0.34), transparent 32%),
+    linear-gradient(145deg, #1f1b18, #100d0b);
+}
+
+.clay-ring {
+  box-shadow: inset 0 0 0 1px rgba(31, 27, 24, 0.08), 0 24px 80px rgba(31, 27, 24, 0.1);
+}
+
+.product-orb {
+  background:
+    radial-gradient(circle at 35% 24%, rgba(253, 251, 247, 0.84), transparent 0 24%),
+    radial-gradient(circle at 62% 68%, rgba(66, 85, 69, 0.24), transparent 0 22%),
+    linear-gradient(135deg, rgba(184, 107, 66, 0.94), rgba(139, 111, 78, 0.62));
+}
+
+.hero-specimen {
+  background:
+    radial-gradient(circle at 50% 20%, rgba(253, 251, 247, 0.7), transparent 0 14%),
+    radial-gradient(ellipse at 50% 55%, rgba(184, 107, 66, 0.98) 0 34%, transparent 35%),
+    radial-gradient(ellipse at 52% 80%, rgba(139, 111, 78, 0.88) 0 16%, transparent 17%),
+    linear-gradient(135deg, rgba(184, 107, 66, 0.7), rgba(66, 85, 69, 0.62));
+}
+
+.artisan-card {
+  background:
+    linear-gradient(135deg, rgba(253, 251, 247, 0.92), rgba(242, 237, 228, 0.8)),
+    radial-gradient(circle at 20% 0%, rgba(184, 107, 66, 0.12), transparent 40%);
+  border: 1px solid rgba(31, 27, 24, 0.1);
+  box-shadow: 0 18px 60px rgba(31, 27, 24, 0.09);
+}
+
+.diagonal-cut {
+  clip-path: polygon(0 0, 100% 0, 100% 88%, 0 100%);
+}
+
+.focus-visible-outline:focus-visible {
+  outline: 3px solid rgba(184, 107, 66, 0.55);
+  outline-offset: 3px;
+}
