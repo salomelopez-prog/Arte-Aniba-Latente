@@ -107,8 +107,8 @@ const create = async (req, res) => {
     const slug = data.slug || data.reference.toLowerCase().replace(/[^a-z0-9-]/g, '-');
 
     const result = await query(
-      `INSERT INTO products (reference, name, slug, category_id, price, compare_price, description, short_description, material, size, dimensions, weight_grams, tone, image_url, gallery_images, stock_quantity, stock_alert_threshold, is_active, is_featured, sort_order)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+      `INSERT INTO products (reference, name, slug, category_id, price, compare_price, description, short_description, material, size, dimensions, weight_grams, tone, image_url, gallery_images, stock_quantity, stock_alert_threshold, is_active, is_featured, sort_order, grupo)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
        RETURNING *`,
       [
         data.reference, sanitizeString(data.name, 200), slug,
@@ -120,6 +120,7 @@ const create = async (req, res) => {
         JSON.stringify(data.gallery_images || []),
         data.stock_quantity ?? 0, data.stock_alert_threshold ?? 3,
         parseBool(data.is_active, true), parseBool(data.is_featured, false), data.sort_order ?? 0,
+        data.grupo ? sanitizeString(data.grupo, 120) : null,
       ]
     );
 
@@ -177,8 +178,9 @@ const update = async (req, res) => {
         stock_alert_threshold = COALESCE($17, stock_alert_threshold),
         is_active = COALESCE($18, is_active),
         is_featured = COALESCE($19, is_featured),
-        sort_order = COALESCE($20, sort_order)
-       WHERE id = $21
+        sort_order = COALESCE($20, sort_order),
+        grupo = CASE WHEN $21::text IS NULL THEN grupo ELSE NULLIF($21, '') END
+       WHERE id = $22
        RETURNING *`,
       [
         data.reference, data.name, data.slug,
@@ -189,6 +191,8 @@ const update = async (req, res) => {
         data.gallery_images ? JSON.stringify(data.gallery_images) : null,
         data.stock_quantity, data.stock_alert_threshold,
         isActive, isFeatured, data.sort_order,
+        // undefined => no se tocó (CASE conserva); '' => desagrupar (NULL); texto => asignar grupo
+        data.grupo === undefined ? null : sanitizeString(data.grupo, 120),
         id,
       ]
     );

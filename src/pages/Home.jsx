@@ -1,11 +1,14 @@
 import { motion } from 'framer-motion'
 import { ArrowRight, Leaf, ShieldCheck, Truck } from 'lucide-react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import ProductCard from '../components/ui/ProductCard.jsx'
+import ProductDetailModal from '../components/ui/ProductDetailModal.jsx'
 import { useProducts } from '../context/ProductContext.jsx'
 
 const Home = () => {
   const { products } = useProducts()
+  const [selectedVariants, setSelectedVariants] = useState(null)
   const featuredProducts = products.filter((product) => ['1107', '1156', '1141'].includes(product.reference))
   const visibleProducts = featuredProducts.length > 0 ? featuredProducts : products.slice(0, 3)
 
@@ -113,10 +116,12 @@ const Home = () => {
         </div>
         <div className="mt-8 grid gap-5 md:grid-cols-3">
           {visibleProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard key={product.id} product={product} onSelect={setSelectedVariants} />
           ))}
         </div>
       </section>
+
+      <ProductDetailModal variants={selectedVariants} onClose={() => setSelectedVariants(null)} />
     </div>
   )
 }

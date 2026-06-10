@@ -30,6 +30,7 @@ export const ProductProvider = ({ children }) => {
           slug: p.slug,
           stock: p.stock_quantity,
           isActive: p.is_active,
+          grupo: p.grupo || null,
         }))
         setProducts(mapped)
         setDbCategories(categoryData.categories || [])

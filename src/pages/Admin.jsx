@@ -100,7 +100,7 @@ const statusColor = (s) => ({
 }[s] || 'bg-carbon/10 text-carbon/60')
 
 // ─── Products Tab ───
-const emptyProductForm = { reference: '', name: '', category_id: '', price: '', size: '', description: '', stock_quantity: '0', image_url: '', is_active: true }
+const emptyProductForm = { reference: '', name: '', category_id: '', price: '', size: '', description: '', stock_quantity: '0', image_url: '', is_active: true, grupo: '' }
 
 const ProductsTab = () => {
   const [products, setProducts] = useState([])
@@ -144,6 +144,7 @@ const ProductsTab = () => {
       fd.append('description', form.description)
       fd.append('stock_quantity', String(Number(form.stock_quantity)))
       fd.append('is_active', String(form.is_active))
+      fd.append('grupo', form.grupo) // siempre se envía: vacío = desagrupar
       if (form.image_url) fd.append('image_url', form.image_url)
       if (imageFile) fd.append('image', imageFile)
 
@@ -165,7 +166,7 @@ const ProductsTab = () => {
   const handleEdit = (p) => {
     setEditing(p.id)
     setImageFile(null)
-    setForm({ reference: p.reference, name: p.name, category_id: String(p.category_id), price: String(p.price), size: p.size || '', description: p.description, stock_quantity: String(p.stock_quantity), image_url: p.image_url || '', is_active: p.is_active })
+    setForm({ reference: p.reference, name: p.name, category_id: String(p.category_id), price: String(p.price), size: p.size || '', description: p.description, stock_quantity: String(p.stock_quantity), image_url: p.image_url || '', is_active: p.is_active, grupo: p.grupo || '' })
   }
 
   const handleDelete = async (id) => {
@@ -202,6 +203,9 @@ const ProductsTab = () => {
             <label className="grid gap-1 text-sm font-bold text-carbon">Tamaño<input className="rounded-xl border border-carbon/10 bg-clay-surface px-4 py-2.5 font-medium" name="size" value={form.size} onChange={(e) => setForm({ ...form, size: e.target.value })} /></label>
             <label className="grid gap-1 text-sm font-bold text-carbon">Stock<input className="rounded-xl border border-carbon/10 bg-clay-surface px-4 py-2.5 font-medium" type="number" min="0" name="stock_quantity" value={form.stock_quantity} onChange={(e) => setForm({ ...form, stock_quantity: e.target.value })} /></label>
           </div>
+          <label className="grid gap-1 text-sm font-bold text-carbon">Grupo (para juntar tamaños del mismo producto)
+            <input className="rounded-xl border border-carbon/10 bg-clay-surface px-4 py-2.5 font-medium" placeholder="Ej. Hongo (déjalo vacío si es único)" name="grupo" value={form.grupo} onChange={(e) => setForm({ ...form, grupo: e.target.value })} />
+          </label>
           <label className="grid gap-1 text-sm font-bold text-carbon">Imagen (subir archivo)
             <input type="file" accept="image/jpeg,image/png,image/webp" className="rounded-xl border border-carbon/10 bg-clay-surface px-4 py-2.5 text-sm font-medium file:mr-3 file:rounded-full file:border-0 file:bg-clay file:px-3 file:py-1 file:text-clay-bg" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
           </label>

@@ -2,11 +2,13 @@ import { AnimatePresence } from 'framer-motion'
 import { Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import ProductCard from '../components/ui/ProductCard.jsx'
+import ProductDetailModal from '../components/ui/ProductDetailModal.jsx'
 import { useProducts } from '../context/ProductContext.jsx'
 
 const Catalog = () => {
   const [selectedCategory, setSelectedCategory] = useState('Todos')
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedVariants, setSelectedVariants] = useState(null)
   const { categories, products } = useProducts()
 
   const filteredProducts = useMemo(() => {
@@ -18,7 +20,23 @@ const Catalog = () => {
 
       return matchesCategory && matchesSearch
     })
-  }, [searchTerm, selectedCategory])
+  }, [products, searchTerm, selectedCategory])
+
+  // Agrupa por 'grupo': productos con el mismo grupo se muestran como una sola tarjeta.
+  // Los que no tienen grupo quedan individuales (clave única por id).
+  const groups = useMemo(() => {
+    const map = new Map()
+    filteredProducts.forEach((p) => {
+      const key = p.grupo && p.grupo.trim() ? `g:${p.grupo.trim().toLowerCase()}` : `p:${p.id}`
+      if (!map.has(key)) map.set(key, [])
+      map.get(key).push(p)
+    })
+    // Ordena las variantes de cada grupo por precio ascendente
+    return Array.from(map.entries()).map(([key, variants]) => ({
+      key,
+      variants: [...variants].sort((a, b) => a.price - b.price),
+    }))
+  }, [filteredProducts])
 
   return (
     <div className="px-4 py-10 md:px-8 md:py-16">
@@ -70,8 +88,8 @@ const Catalog = () => {
 
         <div className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           <AnimatePresence mode="popLayout">
-            {filteredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
+            {groups.map((g) => (
+              <ProductCard key={g.key} product={g.variants[0]} variants={g.variants} onSelect={setSelectedVariants} />
             ))}
           </AnimatePresence>
         </div>
@@ -83,6 +101,8 @@ const Catalog = () => {
           </div>
         ) : null}
       </section>
+
+      <ProductDetailModal variants={selectedVariants} onClose={() => setSelectedVariants(null)} />
     </div>
   )
 }
