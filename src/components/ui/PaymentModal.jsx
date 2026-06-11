@@ -48,6 +48,35 @@ const PaymentModal = ({ isOpen, onClose }) => {
     setError('')
   }
 
+  // Abre la pasarela de Bold con la configuración (firma) generada por el servidor.
+  const openBoldCheckout = (bold) => {
+    const launch = () => {
+      const checkout = new window.BoldCheckout({
+        orderId: bold.orderId,
+        currency: bold.currency,
+        amount: bold.amount,
+        apiKey: bold.apiKey,
+        integritySignature: bold.integritySignature,
+        description: bold.description,
+        redirectionUrl: bold.redirectionUrl,
+        customerData: JSON.stringify({
+          email: customerForm.email,
+          fullName: `${customerForm.first_name} ${customerForm.last_name || ''}`.trim(),
+          phone: customerForm.phone,
+        }),
+      })
+      checkout.open()
+    }
+
+    if (window.BoldCheckout) {
+      launch()
+    } else {
+      // El script de Bold aún no terminó de cargar: esperar el evento.
+      window.addEventListener('boldCheckoutLoaded', launch, { once: true })
+      setLoading(false)
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -76,9 +105,17 @@ const PaymentModal = ({ isOpen, onClose }) => {
       }
 
       const result = await ordersApi.create(payload)
+      clearCart()
+
+      if (result.bold) {
+        // Pasarela real de Bold: abrir el Botón de Pagos con la firma del servidor.
+        openBoldCheckout(result.bold)
+        return
+      }
+
+      // Modo simulado (sin llaves de Bold configuradas)
       setOrderNumber(result.order.order_number)
       setPaymentUrl(result.paymentUrl)
-      clearCart()
     } catch (err) {
       setError(err.data?.error || err.message || 'Error al procesar el pedido')
     } finally {

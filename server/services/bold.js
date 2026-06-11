@@ -1,60 +1,43 @@
 import crypto from 'crypto';
 
-const BOLD_API_URL = process.env.BOLD_API_URL || 'https://api.bold.co';
-const BOLD_API_KEY = process.env.BOLD_API_KEY;
+// Llave de IDENTIDAD (pública, identifica el comercio) y llave SECRETA (privada, firma).
+const BOLD_IDENTITY_KEY = process.env.BOLD_API_KEY;
 const BOLD_SECRET_KEY = process.env.BOLD_SECRET_KEY;
 
-const createPaymentLink = async ({ orderNumber, total, customerName, customerEmail, customerPhone, description, redirectUrl }) => {
-  try {
-    if (!BOLD_API_KEY || !BOLD_SECRET_KEY) {
-      console.warn('[Bold] Credenciales no configuradas. Usando modo simulado.');
-      return {
-        success: true,
-        simulated: true,
-        paymentUrl: `${process.env.CLIENT_URL || 'http://localhost:5173'}/pago/simulado?order=${orderNumber}`,
-        paymentId: `sim_${Date.now()}`,
-      };
-    }
+// Construye la configuración del Botón de Pagos de Bold para un pedido.
+// La firma de integridad es SHA256("{orderId}{amount}{currency}{secretKey}")
+// y se calcula en el servidor para no exponer la llave secreta.
+// Si no hay llaves configuradas, devuelve modo simulado (como antes).
+const buildCheckout = ({ orderNumber, total }) => {
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
 
-    const payload = {
-      amount: total,
-      currency: 'COP',
-      reference: orderNumber,
-      description: description || `Pedido ${orderNumber} - Arte Aniba`,
-      redirectUrl: redirectUrl || process.env.BOLD_REDIRECT_URL,
-      customer: {
-        name: customerName,
-        email: customerEmail,
-        phone: customerPhone,
-      },
-    };
-
-    const response = await fetch(`${BOLD_API_URL}/v1/checkout`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${BOLD_API_KEY}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.text();
-      throw new Error(`Bold API error: ${response.status} - ${errorData}`);
-    }
-
-    const data = await response.json();
-
+  if (!BOLD_IDENTITY_KEY || !BOLD_SECRET_KEY) {
+    console.warn('[Bold] Llaves no configuradas. Usando modo simulado.');
     return {
-      success: true,
-      simulated: false,
-      paymentUrl: data.checkout_url || data.url,
-      paymentId: data.id || data.payment_id,
+      simulated: true,
+      paymentUrl: `${clientUrl}/pago/simulado?order=${orderNumber}`,
     };
-  } catch (error) {
-    console.error('[Bold] Error al crear link de pago:', error.message);
-    return { success: false, error: error.message };
   }
+
+  const amount = String(total); // COP sin decimales
+  const currency = 'COP';
+  const integritySignature = crypto
+    .createHash('sha256')
+    .update(`${orderNumber}${amount}${currency}${BOLD_SECRET_KEY}`)
+    .digest('hex');
+
+  return {
+    simulated: false,
+    bold: {
+      apiKey: BOLD_IDENTITY_KEY,
+      orderId: orderNumber,
+      amount,
+      currency,
+      integritySignature,
+      description: `Pedido ${orderNumber} - Arte Aniba`,
+      redirectionUrl: `${clientUrl}/pago/confirmacion`,
+    },
+  };
 };
 
 const verifyWebhookSignature = (payload, signature, secret) => {
@@ -77,4 +60,4 @@ const verifyWebhookSignature = (payload, signature, secret) => {
   }
 };
 
-export { createPaymentLink, verifyWebhookSignature };
+export { buildCheckout, verifyWebhookSignature };

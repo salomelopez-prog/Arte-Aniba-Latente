@@ -1,6 +1,6 @@
 import { query } from '../config/db.js';
 import { validateOrder, sanitizeString, sanitizeEmail, sanitizePhone } from '../utils/validators.js';
-import { createPaymentLink } from '../services/bold.js';
+import { buildCheckout } from '../services/bold.js';
 import { sendOrderConfirmationToCustomer, sendNewOrderNotificationToAdmin, sendShippingUpdate } from '../services/email.js';
 
 const list = async (req, res) => {
@@ -201,18 +201,8 @@ const create = async (req, res) => {
       await query('UPDATE customers SET first_purchase_at = NOW() WHERE id = $1', [customerId]);
     }
 
-    const paymentResult = await createPaymentLink({
-      orderNumber: order.order_number,
-      total,
-      customerName: `${customer.first_name} ${customer.last_name || ''}`,
-      customerEmail: customer.email,
-      customerPhone: customer.phone,
-      description: `Pedido ${order.order_number} - Arte Aniba`,
-    });
-
-    if (paymentResult.success && paymentResult.paymentId) {
-      await query('UPDATE orders SET bold_payment_id = $1 WHERE id = $2', [paymentResult.paymentId, order.id]);
-    }
+    // Config del checkout de Bold (firma de integridad calculada en el servidor).
+    const checkout = buildCheckout({ orderNumber: order.order_number, total });
 
     sendOrderConfirmationToCustomer(order, customer, itemsData);
     sendNewOrderNotificationToAdmin(order, customer);
@@ -221,8 +211,9 @@ const create = async (req, res) => {
       order,
       items: itemsData,
       customer,
-      paymentUrl: paymentResult.paymentUrl,
-      simulated: paymentResult.simulated || false,
+      bold: checkout.bold || null,            // config para abrir el Botón de Pagos
+      paymentUrl: checkout.paymentUrl || null, // solo en modo simulado
+      simulated: checkout.simulated || false,
     });
   } catch (error) {
     console.error('[Orders] Error al crear:', error.message);
