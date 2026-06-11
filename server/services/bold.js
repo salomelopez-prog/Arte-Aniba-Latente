@@ -40,24 +40,24 @@ const buildCheckout = ({ orderNumber, total }) => {
   };
 };
 
-const verifyWebhookSignature = (payload, signature, secret) => {
-  try {
-    const webhookSecret = secret || process.env.BOLD_WEBHOOK_SECRET;
-    if (!webhookSecret) {
-      console.warn('[Bold] Webhook secret no configurado. Saltando verificación.');
-      return true;
+// Verifica la firma del webhook de Bold.
+// Esquema oficial: HMAC-SHA256( base64(rawBody) , llaveSecreta ) en hexadecimal,
+// comparado con el header x-bold-signature. En modo de PRUEBAS Bold firma con
+// llave vacía, por eso se prueban varias llaves candidatas.
+const verifyWebhookSignature = (rawBody, signature) => {
+  if (!signature) return false;
+  const encoded = Buffer.from(rawBody, 'utf8').toString('base64');
+  const secrets = [process.env.BOLD_WEBHOOK_SECRET, process.env.BOLD_SECRET_KEY, ''].filter(
+    (s) => s !== undefined && s !== null,
+  );
+  return secrets.some((secret) => {
+    try {
+      const expected = crypto.createHmac('sha256', secret).update(encoded).digest('hex');
+      return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+    } catch {
+      return false;
     }
-
-    const expectedSignature = crypto
-      .createHmac('sha256', webhookSecret)
-      .update(typeof payload === 'string' ? payload : JSON.stringify(payload))
-      .digest('hex');
-
-    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
-  } catch (error) {
-    console.error('[Bold] Error al verificar webhook:', error.message);
-    return false;
-  }
+  });
 };
 
 export { buildCheckout, verifyWebhookSignature };

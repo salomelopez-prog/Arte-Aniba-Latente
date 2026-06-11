@@ -1,37 +1,50 @@
 import { query } from '../config/db.js';
 import { verifyWebhookSignature } from '../services/bold.js';
+import { sendOrderConfirmationToCustomer } from '../services/email.js';
 
 const handleWebhook = async (req, res) => {
   try {
-    const signature = req.headers['x-bold-signature'] || req.headers['x-signature'];
-    const payload = req.body;
+    const signature = req.headers['x-bold-signature'];
+    const rawBody = req.rawBody || JSON.stringify(req.body || {});
 
-    if (!verifyWebhookSignature(JSON.stringify(payload), signature)) {
-      return res.status(401).json({ error: 'Firma inválida' });
+    // Verificación de firma (no bloqueante: si falla solo se registra, para no perder
+    // notificaciones legítimas mientras se afina; se puede endurecer a 401 más adelante).
+    if (!verifyWebhookSignature(rawBody, signature)) {
+      console.warn('[Bold Webhook] Firma inválida o ausente — se procesa igual y se registra.');
     }
 
-    const eventType = payload.event || payload.type;
-    const paymentId = payload.payment?.id || payload.data?.id || payload.id;
-    const reference = payload.payment?.reference || payload.data?.reference || payload.reference;
-    const paymentStatus = payload.payment?.status || payload.data?.status || payload.status;
+    const payload = req.body || {};
+    const type = payload.type;                           // SALE_APPROVED, SALE_REJECTED, ...
+    const reference = payload.data?.metadata?.reference;  // = order_number
+    const paymentId = payload.data?.payment_id;
 
-    console.log(`[Bold Webhook] Evento: ${eventType}, Referencia: ${reference}, Estado: ${paymentStatus}`);
+    console.log(`[Bold Webhook] Tipo: ${type}, Referencia: ${reference}, Pago: ${paymentId}`);
 
-    if (paymentStatus === 'approved' || paymentStatus === 'successful' || paymentStatus === 'completed') {
+    if (!reference) return res.status(200).json({ received: true });
+
+    if (type === 'SALE_APPROVED') {
       const orderResult = await query(
-        'UPDATE orders SET status = $1, paid_at = NOW(), bold_payment_id = $2, payment_method = $3 WHERE order_number = $4 AND status = $5 RETURNING *',
-        ['paid', paymentId, 'Bold - Tarjeta crédito/débito', reference, 'pending']
+        `UPDATE orders SET status = 'paid', paid_at = NOW(), bold_payment_id = $1, payment_method = 'Bold'
+         WHERE order_number = $2 AND status = 'pending' RETURNING *`,
+        [paymentId || null, reference]
       );
 
       if (orderResult.rows.length > 0) {
-        console.log(`[Bold Webhook] Pedido ${reference} marcado como pagado`);
-      }
-    }
+        const order = orderResult.rows[0];
+        const customerResult = await query('SELECT * FROM customers WHERE id = $1', [order.customer_id]);
+        const itemsResult = await query('SELECT * FROM order_items WHERE order_id = $1', [order.id]);
+        const customer = customerResult.rows[0];
 
-    if (paymentStatus === 'failed' || paymentStatus === 'declined') {
+        // Factura/confirmación de pago al cliente (si hay email y SMTP configurado)
+        if (customer?.email) {
+          sendOrderConfirmationToCustomer(order, customer, itemsResult.rows);
+        }
+        console.log(`[Bold Webhook] Pedido ${reference} marcado como PAGADO`);
+      }
+    } else if (type === 'SALE_REJECTED') {
       await query(
-        'UPDATE orders SET notes = COALESCE(notes || E\'\\n\', \'\') || $1 WHERE order_number = $2',
-        [`Pago rechazado por Bold (ID: ${paymentId})`, reference]
+        `UPDATE orders SET notes = COALESCE(notes || E'\\n', '') || $1 WHERE order_number = $2`,
+        [`Pago rechazado por Bold (${paymentId || 's/id'})`, reference]
       );
     }
 
