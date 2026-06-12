@@ -1,16 +1,38 @@
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, Leaf, ShieldCheck, Truck } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { settingsApi } from '../api/client.js'
 import ProductCard from '../components/ui/ProductCard.jsx'
 import ProductDetailModal from '../components/ui/ProductDetailModal.jsx'
 import { useProducts } from '../context/ProductContext.jsx'
+import { safeParse } from '../data/siteContent.js'
 
 const Home = () => {
   const { products } = useProducts()
   const [selectedVariants, setSelectedVariants] = useState(null)
+  const [gallery, setGallery] = useState([])
+  const [galleryIdx, setGalleryIdx] = useState(0)
   const featuredProducts = products.filter((product) => ['1107', '1156', '1141'].includes(product.reference))
   const visibleProducts = featuredProducts.length > 0 ? featuredProducts : products.slice(0, 3)
+
+  // Carga la galería editable del Inicio
+  useEffect(() => {
+    settingsApi
+      .getAll()
+      .then((d) => {
+        const imgs = safeParse(d.settings?.home_gallery, [])
+        setGallery(Array.isArray(imgs) ? imgs.filter(Boolean) : [])
+      })
+      .catch(() => setGallery([]))
+  }, [])
+
+  // Auto-rotación de la galería cada 4s
+  useEffect(() => {
+    if (gallery.length < 2) return
+    const t = setInterval(() => setGalleryIdx((i) => (i + 1) % gallery.length), 4000)
+    return () => clearInterval(t)
+  }, [gallery])
 
   return (
     <div className="px-4 py-10 md:px-8 md:py-16">
@@ -60,32 +82,68 @@ const Home = () => {
           </motion.div>
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, rotate: 2, scale: 0.96 }}
-          animate={{ opacity: 1, rotate: 0, scale: 1 }}
-          transition={{ duration: 0.72, ease: [0.22, 1, 0.36, 1] }}
-          className="dark-shell relative min-h-[540px] overflow-hidden rounded-[3rem] p-6 text-clay-bg shadow-2xl shadow-night/24"
-        >
-          <div className="absolute inset-0 opacity-40 grain-layer" />
-          <div className="absolute -right-16 top-14 h-72 w-72 rounded-full border border-clay-bg/10" />
-          <div className="absolute -bottom-20 -left-14 h-80 w-80 rounded-full bg-clay/20 blur-3xl" />
-          <div className="absolute right-7 top-7 rounded-full border border-clay-bg/15 px-4 py-2 text-xs font-bold uppercase tracking-[0.24em] text-clay-bg/58">
-            Edicion natural
-          </div>
-          <div className="relative flex h-full min-h-[470px] flex-col justify-between">
-            <div className="flex justify-between gap-6">
-              <p className="max-w-48 text-sm uppercase tracking-[0.28em] text-clay-bg/60">Sin moldes, sin tintes, sin piezas repetidas.</p>
-              <p className="font-display text-7xl font-semibold text-clay-soft">14</p>
+        {gallery.length > 0 ? (
+          // Galería editable: fotos del taller, familia, piezas (rota automáticamente)
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.72, ease: [0.22, 1, 0.36, 1] }}
+            className="relative min-h-[540px] overflow-hidden rounded-[3rem] bg-clay-surface shadow-2xl shadow-night/24"
+          >
+            <AnimatePresence mode="wait">
+              <motion.img
+                key={gallery[galleryIdx]}
+                src={gallery[galleryIdx]}
+                alt="Arte Aniba"
+                initial={{ opacity: 0, scale: 1.04 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.6 }}
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            </AnimatePresence>
+            {gallery.length > 1 ? (
+              <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 gap-2">
+                {gallery.map((img, i) => (
+                  <button
+                    key={img}
+                    type="button"
+                    aria-label={`Imagen ${i + 1}`}
+                    onClick={() => setGalleryIdx(i)}
+                    className={`h-2.5 rounded-full transition-all ${i === galleryIdx ? 'w-7 bg-clay-bg' : 'w-2.5 bg-clay-bg/50'}`}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, rotate: 2, scale: 0.96 }}
+            animate={{ opacity: 1, rotate: 0, scale: 1 }}
+            transition={{ duration: 0.72, ease: [0.22, 1, 0.36, 1] }}
+            className="dark-shell relative min-h-[540px] overflow-hidden rounded-[3rem] p-6 text-clay-bg shadow-2xl shadow-night/24"
+          >
+            <div className="absolute inset-0 opacity-40 grain-layer" />
+            <div className="absolute -right-16 top-14 h-72 w-72 rounded-full border border-clay-bg/10" />
+            <div className="absolute -bottom-20 -left-14 h-80 w-80 rounded-full bg-clay/20 blur-3xl" />
+            <div className="absolute right-7 top-7 rounded-full border border-clay-bg/15 px-4 py-2 text-xs font-bold uppercase tracking-[0.24em] text-clay-bg/58">
+              Edicion natural
             </div>
-            <div>
-              <div className="hero-specimen mx-auto h-72 w-72 rounded-[42%_58%_48%_52%/58%_42%_58%_42%] border border-clay-bg/20 shadow-2xl shadow-night/50" />
-              <div className="mt-8 rounded-[2rem] border border-clay-bg/10 bg-clay-bg/10 p-5 backdrop-blur-md">
-                <p className="font-display text-4xl font-semibold">Comino crespo</p>
-                <p className="mt-2 text-clay-bg/68">Raices recuperadas transformadas en esculturas, lamparas y objetos para espacios con alma.</p>
+            <div className="relative flex h-full min-h-[470px] flex-col justify-between">
+              <div className="flex justify-between gap-6">
+                <p className="max-w-48 text-sm uppercase tracking-[0.28em] text-clay-bg/60">Sin moldes, sin tintes, sin piezas repetidas.</p>
+                <p className="font-display text-7xl font-semibold text-clay-soft">14</p>
+              </div>
+              <div>
+                <div className="hero-specimen mx-auto h-72 w-72 rounded-[42%_58%_48%_52%/58%_42%_58%_42%] border border-clay-bg/20 shadow-2xl shadow-night/50" />
+                <div className="mt-8 rounded-[2rem] border border-clay-bg/10 bg-clay-bg/10 p-5 backdrop-blur-md">
+                  <p className="font-display text-4xl font-semibold">Comino crespo</p>
+                  <p className="mt-2 text-clay-bg/68">Raices recuperadas transformadas en esculturas, lamparas y objetos para espacios con alma.</p>
+                </div>
               </div>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        )}
       </section>
 
       <section className="mx-auto mt-16 grid max-w-7xl gap-4 md:grid-cols-3">

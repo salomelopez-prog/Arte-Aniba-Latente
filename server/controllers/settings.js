@@ -45,7 +45,7 @@ const update = async (req, res) => {
 
     const result = await query(
       'UPDATE site_settings SET value = $1, updated_by = $2 WHERE key = $3 RETURNING *',
-      [sanitizeString(String(value), 5000), req.admin?.id || null, key]
+      [sanitizeString(String(value), 20000), req.admin?.id || null, key]
     );
 
     return res.json({ setting: result.rows[0] });

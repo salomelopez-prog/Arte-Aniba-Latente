@@ -15,6 +15,7 @@ import paymentRoutes from './routes/payments.js';
 import adminRoutes from './routes/admin.js';
 import settingRoutes from './routes/settings.js';
 import emailLogRoutes from './routes/emailLog.js';
+import uploadRoutes from './routes/upload.js';
 
 dotenv.config();
 
@@ -42,6 +43,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/email-log', emailLogRoutes);
+app.use('/api/upload', uploadRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({

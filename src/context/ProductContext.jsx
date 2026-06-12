@@ -26,7 +26,8 @@ export const ProductProvider = ({ children }) => {
           size: p.size,
           tone: p.tone || 'from-clay to-walnut',
           imageUrl: p.image_url || '',
-          description: p.short_description || p.description,
+          // Descripción COMPLETA (la que se edita en el admin). short_description solo como respaldo.
+          description: p.description || p.short_description || '',
           slug: p.slug,
           stock: p.stock_quantity,
           isActive: p.is_active,

@@ -102,4 +102,13 @@ export const paymentsApi = {
   getStatus: (orderId) => request(`/payments/status/${orderId}`),
 }
 
+export const uploadApi = {
+  // Sube una imagen y devuelve { url } (Cloudinary). Recibe un File.
+  image: (file) => {
+    const fd = new FormData()
+    fd.append('image', file)
+    return request('/upload', { method: 'POST', body: fd })
+  },
+}
+
 export default request

@@ -6,9 +6,10 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import api, { adminApi, authApi, contactsApi, customersApi, ordersApi, productsApi, settingsApi } from '../api/client.js'
+import api, { adminApi, authApi, contactsApi, customersApi, ordersApi, productsApi, settingsApi, uploadApi } from '../api/client.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { formatCurrency } from '../data/products.js'
+import { DEFAULT_ABOUT, mergeAbout, safeParse } from '../data/siteContent.js'
 
 // ─── Tab Navigation ───
 const TABS = [
@@ -18,6 +19,7 @@ const TABS = [
   { id: 'customers', label: 'Clientes', icon: Users },
   { id: 'messages', label: 'Mensajes', icon: MessageSquare },
   { id: 'inventory', label: 'Inventario', icon: Truck },
+  { id: 'content', label: 'Contenido', icon: Image },
   { id: 'settings', label: 'Configuración', icon: Settings },
   { id: 'emails', label: 'Emails', icon: FileText },
   { id: 'admins', label: 'Usuarios', icon: Users },
@@ -795,6 +797,141 @@ const AdminsTab = () => {
   )
 }
 
+// ─── Content Tab (Inicio: galería · Nosotros: textos) ───
+const inp = 'w-full rounded-xl border border-carbon/10 bg-clay-surface px-4 py-2.5 text-sm font-medium'
+
+const ContentTab = () => {
+  const [gallery, setGallery] = useState([])
+  const [about, setAbout] = useState(DEFAULT_ABOUT)
+  const [loading, setLoading] = useState(true)
+  const [uploading, setUploading] = useState(false)
+  const [savingAbout, setSavingAbout] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  useEffect(() => {
+    settingsApi.getAll()
+      .then((d) => {
+        setGallery(safeParse(d.settings?.home_gallery, []) || [])
+        setAbout(mergeAbout(safeParse(d.settings?.about_content, null)))
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  const saveGallery = async (next) => {
+    setGallery(next)
+    await settingsApi.update('home_gallery', JSON.stringify(next))
+  }
+
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const { url } = await uploadApi.image(file)
+      await saveGallery([...gallery, url])
+    } catch (err) {
+      window.alert(err.data?.error || 'Error al subir la imagen')
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
+
+  const removeImage = async (url) => {
+    if (!window.confirm('¿Quitar esta imagen de la galería?')) return
+    await saveGallery(gallery.filter((u) => u !== url))
+  }
+
+  const saveAbout = async () => {
+    setSavingAbout(true)
+    setMsg('')
+    try {
+      await settingsApi.update('about_content', JSON.stringify(about))
+      setMsg('Contenido de "Nosotros" guardado ✓')
+    } catch (err) {
+      window.alert(err.data?.error || 'Error al guardar')
+    } finally {
+      setSavingAbout(false)
+    }
+  }
+
+  const setField = (key, value) => setAbout((a) => ({ ...a, [key]: value }))
+  const setArr = (key, idx, value) => setAbout((a) => ({ ...a, [key]: a[key].map((v, i) => (i === idx ? value : v)) }))
+  const setObjArr = (key, idx, field, value) =>
+    setAbout((a) => ({ ...a, [key]: a[key].map((v, i) => (i === idx ? { ...v, [field]: value } : v)) }))
+
+  if (loading) return <div className="py-10 text-center text-carbon/48">Cargando contenido...</div>
+
+  return (
+    <div className="grid gap-6">
+      {/* ── Galería del Inicio ── */}
+      <div className="rounded-[2rem] border border-carbon/10 bg-clay-bg p-5">
+        <h3 className="font-display text-3xl font-semibold text-carbon">Galería del Inicio</h3>
+        <p className="mt-1 text-sm text-carbon/56">Sube fotos del taller, la familia o las piezas. Se muestran en la página de inicio (rotan automáticamente). Si no hay ninguna, se ve el diseño por defecto.</p>
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {gallery.map((url) => (
+            <div key={url} className="group relative overflow-hidden rounded-2xl border border-carbon/10">
+              <img src={url} alt="" className="h-32 w-full object-cover" />
+              <button onClick={() => removeImage(url)} className="absolute right-2 top-2 rounded-full bg-red-500/90 p-1.5 text-clay-bg opacity-0 transition group-hover:opacity-100" title="Quitar"><Trash2 className="h-4 w-4" /></button>
+            </div>
+          ))}
+          <label className="flex h-32 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-carbon/20 text-carbon/52 transition hover:border-clay hover:text-clay">
+            <Upload className="h-6 w-6" />
+            <span className="text-xs font-bold">{uploading ? 'Subiendo...' : 'Subir foto'}</span>
+            <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleUpload} disabled={uploading} />
+          </label>
+        </div>
+      </div>
+
+      {/* ── Página Nosotros ── */}
+      <div className="rounded-[2rem] border border-carbon/10 bg-clay-bg p-5">
+        <h3 className="font-display text-3xl font-semibold text-carbon">Página "Nosotros"</h3>
+        <p className="mt-1 text-sm text-carbon/56">Edita todos los textos de la página Nosotros. Guarda al final.</p>
+
+        <div className="mt-5 grid gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="grid gap-1 text-sm font-bold text-carbon">Etiqueta superior<input className={inp} value={about.eyebrow} onChange={(e) => setField('eyebrow', e.target.value)} /></label>
+            <label className="grid gap-1 text-sm font-bold text-carbon">Título principal<input className={inp} value={about.title} onChange={(e) => setField('title', e.target.value)} /></label>
+          </div>
+          <label className="grid gap-1 text-sm font-bold text-carbon">Historia — párrafo 1<textarea className={`${inp} min-h-24`} value={about.history[0] || ''} onChange={(e) => setArr('history', 0, e.target.value)} /></label>
+          <label className="grid gap-1 text-sm font-bold text-carbon">Historia — párrafo 2<textarea className={`${inp} min-h-24`} value={about.history[1] || ''} onChange={(e) => setArr('history', 1, e.target.value)} /></label>
+          <label className="grid gap-1 text-sm font-bold text-carbon">Texto introductorio (derecha)<textarea className={`${inp} min-h-24`} value={about.lead} onChange={(e) => setField('lead', e.target.value)} /></label>
+
+          <p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-carbon/52">Cifras (4 tarjetas)</p>
+          {about.stats.map((s, i) => (
+            <div key={i} className="grid gap-2 rounded-2xl border border-carbon/8 bg-clay-surface p-3 sm:grid-cols-[100px_1fr]">
+              <input className={inp} placeholder="Cifra" value={s.value} onChange={(e) => setObjArr('stats', i, 'value', e.target.value)} />
+              <input className={inp} placeholder="Etiqueta" value={s.label} onChange={(e) => setObjArr('stats', i, 'label', e.target.value)} />
+              <textarea className={`${inp} sm:col-span-2`} placeholder="Descripción" value={s.text} onChange={(e) => setObjArr('stats', i, 'text', e.target.value)} />
+            </div>
+          ))}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="grid gap-1 text-sm font-bold text-carbon">Proceso — etiqueta<input className={inp} value={about.processEyebrow} onChange={(e) => setField('processEyebrow', e.target.value)} /></label>
+            <label className="grid gap-1 text-sm font-bold text-carbon">Proceso — título<input className={inp} value={about.processTitle} onChange={(e) => setField('processTitle', e.target.value)} /></label>
+          </div>
+          <p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-carbon/52">Pasos del proceso (4)</p>
+          {about.steps.map((s, i) => (
+            <div key={i} className="grid gap-2 rounded-2xl border border-carbon/8 bg-clay-surface p-3">
+              <input className={inp} placeholder="Título del paso" value={s.title} onChange={(e) => setObjArr('steps', i, 'title', e.target.value)} />
+              <textarea className={`${inp} min-h-20`} placeholder="Descripción" value={s.text} onChange={(e) => setObjArr('steps', i, 'text', e.target.value)} />
+              <input className={inp} placeholder="Detalle (línea destacada)" value={s.detail} onChange={(e) => setObjArr('steps', i, 'detail', e.target.value)} />
+            </div>
+          ))}
+
+          <label className="grid gap-1 text-sm font-bold text-carbon">Propuesta de valor — título<textarea className={`${inp} min-h-20`} value={about.valueTitle} onChange={(e) => setField('valueTitle', e.target.value)} /></label>
+          <label className="grid gap-1 text-sm font-bold text-carbon">Propuesta de valor — párrafo 1<textarea className={`${inp} min-h-24`} value={about.value[0] || ''} onChange={(e) => setArr('value', 0, e.target.value)} /></label>
+          <label className="grid gap-1 text-sm font-bold text-carbon">Propuesta de valor — párrafo 2<textarea className={`${inp} min-h-24`} value={about.value[1] || ''} onChange={(e) => setArr('value', 1, e.target.value)} /></label>
+
+          {msg && <div className="rounded-xl bg-moss/15 px-4 py-2.5 text-sm font-bold text-moss">{msg}</div>}
+          <button onClick={saveAbout} disabled={savingAbout} className="justify-self-start rounded-full bg-clay px-6 py-3 font-bold text-clay-bg transition hover:bg-clay-dark disabled:opacity-50">{savingAbout ? 'Guardando...' : 'Guardar Nosotros'}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Admin Component ───
 const Admin = () => {
   const { isAuthenticated, user, logout } = useAuth()
@@ -814,6 +951,7 @@ const Admin = () => {
     customers: CustomersTab,
     messages: MessagesTab,
     inventory: InventoryTab,
+    content: ContentTab,
     settings: SettingsTab,
     emails: EmailsTab,
     admins: AdminsTab,

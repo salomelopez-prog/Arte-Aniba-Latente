@@ -92,7 +92,7 @@ const ProductDetailModal = ({ variants, onClose }) => {
                 <h2 className="mt-3 font-display text-4xl font-semibold tracking-tight text-carbon">{baseName}</h2>
               </div>
 
-              <p className="text-base leading-7 text-carbon/72">{selected.description}</p>
+              <p className="whitespace-pre-line text-base leading-7 text-carbon/72">{selected.description}</p>
 
               {/* Selector de tamaño (solo si hay varias variantes) */}
               {isGroup && (

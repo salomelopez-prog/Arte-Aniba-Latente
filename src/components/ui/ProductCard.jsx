@@ -102,7 +102,7 @@ const ProductCard = ({ product, variants, onSelect }) => {
             {isGroup ? `Desde ${formatCurrency(minPrice)}` : formatCurrency(rep.price)}
           </p>
         </div>
-        <p className="mt-4 min-h-16 text-base leading-6 text-carbon/68">{rep.description}</p>
+        <p className="mt-4 line-clamp-3 min-h-16 text-base leading-6 text-carbon/68">{rep.description}</p>
         <div className="mt-3 flex items-center gap-2">
           {!isGroup && rep.stock !== undefined && (
             <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${isOutOfStock ? 'bg-red-100 text-red-600' : rep.stock <= 3 ? 'bg-yellow-100 text-yellow-700' : 'bg-moss/20 text-moss'}`}>
