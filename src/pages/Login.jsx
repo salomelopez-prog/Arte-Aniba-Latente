@@ -66,7 +66,7 @@ const Login = () => {
                     name="email"
                     value={form.email}
                     onChange={handleChange}
-                    placeholder="admin@arteaniba.com"
+                    placeholder="correo"
                     autoComplete="email"
                   />
                 </div>
